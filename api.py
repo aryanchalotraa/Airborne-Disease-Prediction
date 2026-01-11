@@ -1,6 +1,6 @@
 import requests
 
-API_KEY = "def170ff2ceeefcf8dc003e413dd12b1"
+API_KEY = ""
 
 def get_coordinates(city):
     url = f"http://api.openweathermap.org/geo/1.0/direct?q={city}&limit=1&appid={API_KEY}"
