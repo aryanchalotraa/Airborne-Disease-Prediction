@@ -1,80 +1,124 @@
 import streamlit as st
-from api import get_coordinates, get_weather, get_air_quality, get_city_from_coordinates
+import datetime
+
+from api import get_coordinates, get_weather, get_air_quality
 from disease_logic import predict_diseases
-from streamlit_geolocation import streamlit_geolocation
+from influenza import predict_influenza
 
-st.set_page_config(page_title="Airborne Disease Predictor", layout="centered")
-st.title("🌍 AI-Based Airborne Disease Prediction System")
-st.markdown("Predict airborne disease risk and respiratory infections using real-time air quality and weather data.")
-
-# Get GPS location
-location = streamlit_geolocation()
-use_location = st.button("📍 Use My Current Location")
-
-cities = [
-    "Delhi","Mumbai","Kolkata","Chennai","Bengaluru","Hyderabad","Ahmedabad","Pune",
-    "Jaipur","Chandigarh","Lucknow","Kanpur","Patna","Bhopal","Indore","Raipur",
-    "Ranchi","Bhubaneswar","Guwahati","Shillong","Agartala","Imphal",
-    "Jammu","Srinagar","Amritsar","Ludhiana","Noida","Ghaziabad","Gurugram",
-    "Varanasi","Agra","Surat","Vadodara","Nagpur","Kochi","Puducherry"
-]
-
-# Sync dropdown with detected city
-if "city" not in st.session_state:
-    st.session_state.city = cities[0]
-
-selected_city = st.selectbox(
-    "🏙 Select City",
-    cities,
-    index=cities.index(st.session_state.city) if st.session_state.city in cities else 0
+# -------------------------------
+# STREAMLIT CONFIG
+# -------------------------------
+st.set_page_config(
+    page_title="HealthSense AI",
+    layout="centered"
 )
 
-# Decide location
-if use_location and location and "latitude" in location:
-    lat = location["latitude"]
-    lon = location["longitude"]
-    city = get_city_from_coordinates(lat, lon)
-    st.session_state.city = city
-    st.success(f"Detected City: {city}")
-else:
-    city = selected_city
-    st.session_state.city = city
-    lat, lon = get_coordinates(city)
+st.title("🌍 HealthSense AI")
+st.subheader("Climate-Driven Health Risk Prediction System")
 
-if st.button("🔍 Predict"):
-    weather = get_weather(city)
-    air = get_air_quality(lat, lon)
+st.markdown(
+    """
+This system predicts **regional health risks** based on  
+🌦 weather conditions, 🌫 air quality, and 🧠 epidemiological patterns.
 
-    pm25 = air["pm25"]
+⚠️ *This is NOT a diagnostic system.*
+"""
+)
 
-    # WHO-based risk
-    if pm25 < 60:
-        risk = "Low"
-    elif pm25 < 120:
-        risk = "Medium"
-    else:
-        risk = "High"
+# -------------------------------
+# CITY SELECTION
+# -------------------------------
+cities = [
+    "Delhi", "Mumbai", "Kolkata", "Chennai", "Bengaluru",
+    "Hyderabad", "Ahmedabad", "Pune", "Jaipur", "Chandigarh",
+    "Jammu", "Srinagar", "Amritsar", "Ludhiana", "Dehradun"
+]
 
-    diseases = predict_diseases(pm25, air["pm10"], air["aqi"], weather["temp"], weather["humidity"])
+city = st.selectbox("🏙 Select City", cities)
 
-    st.subheader(f"📍 {city}")
-    st.write("🌡 Temperature:", weather["temp"], "°C")
-    st.write("💧 Humidity:", weather["humidity"], "%")
-    st.write("🌫 PM2.5:", pm25)
-    st.write("🌫 PM10:", air["pm10"])
-    st.write("📊 AQI:", air["aqi"])
+# -------------------------------
+# PREDICTION BUTTON
+# -------------------------------
+if st.button("🔍 Predict Health Risk"):
 
-    st.subheader("⚠ Disease Risk Level")
-    if risk == "High":
-        st.error(risk)
-    elif risk == "Medium":
-        st.warning(risk)
-    else:
-        st.success(risk)
+    try:
+        # -------------------------------
+        # FETCH LIVE DATA
+        # -------------------------------
+        lat, lon = get_coordinates(city)
+        weather = get_weather(city)
+        air = get_air_quality(lat, lon)
 
-    st.subheader("🦠 Likely Airborne Diseases")
-    if len(diseases) == 0:
-        st.write("No significant airborne disease risk detected.")
-    else:
-        for d in diseases:
-            st.write("•", d)
+        current_month = datetime.datetime.now().month
+
+        # -------------------------------
+        # INFLUENZA RISK (SEASONAL MODEL)
+        # -------------------------------
+        flu_risk = predict_influenza(
+            month=current_month,
+            temperature=weather["temp"],
+            humidity=weather["humidity"]
+        )
+
+        # -------------------------------
+        # OTHER CLIMATE / AIR RISKS
+        # -------------------------------
+        other_risks = predict_diseases(
+            pm25=air["pm25"],
+            pm10=air["pm10"],
+            aqi=air["aqi"],
+            temp=weather["temp"],
+            humidity=weather["humidity"],
+            month=current_month
+        )
+
+        # -------------------------------
+        # DISPLAY RESULTS
+        # -------------------------------
+        st.subheader(f"📍 {city}")
+
+        st.markdown("### 🌦 Current Environmental Conditions")
+        st.write(f"🌡 Temperature: {weather['temp']} °C")
+        st.write(f"💧 Humidity: {weather['humidity']} %")
+        st.write(f"🌫 PM2.5: {air['pm25']}")
+        st.write(f"🌫 PM10: {air['pm10']}")
+        st.write(f"📊 AQI Index: {air['aqi']}")
+
+        # -------------------------------
+        # INFLUENZA RESULT
+        # -------------------------------
+        st.markdown("### 😷 Seasonal Influenza Risk (Monthly)")
+        if flu_risk == "High":
+            st.error(flu_risk)
+        elif flu_risk == "Medium":
+            st.warning(flu_risk)
+        else:
+            st.success(flu_risk)
+
+        # -------------------------------
+        # OTHER HEALTH RISKS
+        # -------------------------------
+        st.markdown("### ⚠ Other Climate-Driven Health Risks")
+        if other_risks:
+            for risk in other_risks:
+                st.write("•", risk)
+        else:
+            st.success("No major climate-related health risks detected")
+
+        # -------------------------------
+        # EXPLANATION (VERY IMPORTANT)
+        # -------------------------------
+        st.markdown("### 📌 Why these risks?")
+        st.write("• High air pollution increases respiratory stress")
+        st.write("• Cold temperatures and high humidity increase influenza spread")
+        st.write("• Extreme heat can cause dehydration and heat exhaustion")
+        st.write("• High humidity increases skin infection risk")
+
+        st.caption(
+            "⚠ This system predicts **regional health risk patterns** only. "
+            "It does not diagnose individuals or replace medical professionals."
+        )
+
+    except Exception as e:
+        st.error("Unable to fetch data for this city. Please try another.")
+        st.write("Debug info:", e)
