@@ -26,3 +26,6 @@ Air quality data
 Disease risk level
 
 Probable airborne diseases
+
+Seasonal influenza risk is predicted using epidemiological seasonality
+patterns due to limited longitudinal surveillance data
