@@ -1,80 +1,89 @@
 import streamlit as st
-from api import get_coordinates, get_weather, get_air_quality, get_city_from_coordinates
-from disease_logic import predict_diseases
-from streamlit_geolocation import streamlit_geolocation
+import requests
+from disease_logic import predict_disease_risk
 
-st.set_page_config(page_title="Airborne Disease Predictor", layout="centered")
-st.title("🌍 AI-Based Airborne Disease Prediction System")
-st.markdown("Predict airborne disease risk and respiratory infections using real-time air quality and weather data.")
+API_KEY = "def170ff2ceeefcf8dc003e413dd12b1"
 
-# Get GPS location
-location = streamlit_geolocation()
-use_location = st.button("📍 Use My Current Location")
+# -----------------------------
+# Get Latitude & Longitude
+# -----------------------------
+def get_lat_lon(city):
+    url = f"https://api.openweathermap.org/geo/1.0/direct?q={city}&limit=1&appid={API_KEY}"
+    data = requests.get(url).json()
+    return data[0]["lat"], data[0]["lon"]
 
-cities = [
-    "Delhi","Mumbai","Kolkata","Chennai","Bengaluru","Hyderabad","Ahmedabad","Pune",
-    "Jaipur","Chandigarh","Lucknow","Kanpur","Patna","Bhopal","Indore","Raipur",
-    "Ranchi","Bhubaneswar","Guwahati","Shillong","Agartala","Imphal",
-    "Jammu","Srinagar","Amritsar","Ludhiana","Noida","Ghaziabad","Gurugram",
-    "Varanasi","Agra","Surat","Vadodara","Nagpur","Kochi","Puducherry"
-]
+# -----------------------------
+# Weather Data
+# -----------------------------
+def get_weather(city):
+    lat, lon = get_lat_lon(city)
+    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
+    data = requests.get(url).json()
 
-# Sync dropdown with detected city
-if "city" not in st.session_state:
-    st.session_state.city = cities[0]
+    return {
+        "temperature": data["main"]["temp"],
+        "humidity": data["main"]["humidity"],
+        "wind_speed": data["wind"]["speed"],
+        "rainfall": data.get("rain", {}).get("1h", 0),
+        "pressure": data["main"]["pressure"]
+    }
 
-selected_city = st.selectbox(
-    "🏙 Select City",
-    cities,
-    index=cities.index(st.session_state.city) if st.session_state.city in cities else 0
-)
+# -----------------------------
+# Air Quality Data
+# -----------------------------
+def get_air_quality(city):
+    lat, lon = get_lat_lon(city)
+    url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
+    data = requests.get(url).json()["list"][0]
 
-# Decide location
-if use_location and location and "latitude" in location:
-    lat = location["latitude"]
-    lon = location["longitude"]
-    city = get_city_from_coordinates(lat, lon)
-    st.session_state.city = city
-    st.success(f"Detected City: {city}")
-else:
-    city = selected_city
-    st.session_state.city = city
-    lat, lon = get_coordinates(city)
+    return {
+        "aqi": data["main"]["aqi"] * 50,
+        "pm25": data["components"]["pm2_5"],
+        "pm10": data["components"]["pm10"]
+    }
 
-if st.button("🔍 Predict"):
-    weather = get_weather(city)
-    air = get_air_quality(lat, lon)
+# -----------------------------
+# Streamlit UI
+# -----------------------------
+st.set_page_config(page_title="Environmental Disease Predictor", layout="centered")
+st.title("🌍 Environmental Disease Prediction System")
 
-    pm25 = air["pm25"]
+cities = ["Delhi", "Jammu", "Mumbai", "Kolkata", "Chandigarh", "Shimla"]
+city = st.selectbox("Select City", cities)
 
-    # WHO-based risk
-    if pm25 < 60:
-        risk = "Low"
-    elif pm25 < 120:
-        risk = "Medium"
+if st.button("Predict"):
+    air_data = get_air_quality(city)
+    weather_data = get_weather(city)
+
+    result = predict_disease_risk(air_data, weather_data)
+
+    st.markdown("---")
+    st.subheader("🌍 Environmental Conditions")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("### 🌡 Weather")
+        st.metric("Temperature (°C)", f"{weather_data['temperature']}")
+        st.metric("Humidity (%)", f"{weather_data['humidity']}")
+        st.metric("Pressure (hPa)", f"{weather_data['pressure']}")
+
+    with col2:
+        st.markdown("### 🌬 Air Quality")
+        st.metric("AQI", f"{air_data['aqi']}")
+        st.metric("PM2.5 (µg/m³)", f"{air_data['pm25']:.1f}")
+        st.metric("PM10 (µg/m³)", f"{air_data['pm10']:.1f}")
+
+    st.markdown("---")
+    st.subheader("🩺 Health Risk")
+
+    if result["risk_level"] == "High":
+        st.error("🚨 High Risk Area")
+    elif result["risk_level"] == "Medium":
+        st.warning("⚠️ Medium Risk Area")
     else:
-        risk = "High"
+        st.success("✅ Low Risk Area")
 
-    diseases = predict_diseases(pm25, air["pm10"], air["aqi"], weather["temp"], weather["humidity"])
-
-    st.subheader(f"📍 {city}")
-    st.write("🌡 Temperature:", weather["temp"], "°C")
-    st.write("💧 Humidity:", weather["humidity"], "%")
-    st.write("🌫 PM2.5:", pm25)
-    st.write("🌫 PM10:", air["pm10"])
-    st.write("📊 AQI:", air["aqi"])
-
-    st.subheader("⚠ Disease Risk Level")
-    if risk == "High":
-        st.error(risk)
-    elif risk == "Medium":
-        st.warning(risk)
-    else:
-        st.success(risk)
-
-    st.subheader("🦠 Likely Airborne Diseases")
-    if len(diseases) == 0:
-        st.write("No significant airborne disease risk detected.")
-    else:
-        for d in diseases:
-            st.write("•", d)
+    st.markdown("### 🔬 Most Likely Diseases")
+    for d in result["predicted_diseases"]:
+        st.markdown(f"- **{d}**")

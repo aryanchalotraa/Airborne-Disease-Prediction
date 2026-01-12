@@ -1,24 +1,30 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 import joblib
 
-data = pd.read_csv("air_quality_health_impact_data.csv")
+df = pd.read_csv("disease_data.csv")
 
-cols = ["PM2_5","PM10","AQI","NO2","SO2","O3","Temperature","Humidity","HealthImpactClass"]
-data = data[cols]
+def create_risk(row):
+    if row["pm25"] > 120 or row["aqi"] > 180:
+        return "High"
+    elif row["pm25"] > 60:
+        return "Medium"
+    else:
+        return "Low"
 
-le = LabelEncoder()
-data["HealthImpactClass"] = le.fit_transform(data["HealthImpactClass"])
+df["risk"] = df.apply(create_risk, axis=1)
 
-X = data.drop("HealthImpactClass", axis=1)
-y = data["HealthImpactClass"]
+X = df[[
+    "pm25", "pm10", "aqi",
+    "temperature", "humidity",
+    "wind_speed", "rainfall",
+    "pressure"
+]]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+y = df["risk"]
 
 model = RandomForestClassifier(n_estimators=200)
-model.fit(X_train, y_train)
+model.fit(X, y)
 
 joblib.dump(model, "air_disease_model.pkl")
-print("Model trained and saved")
+print("Model trained successfully")
