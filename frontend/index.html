@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Environmental Disease Prediction System</title>
+  <style>
+    body {font-family: 'Segoe UI', Arial, sans-serif; margin:0; background:#0f172a; color:#e5e7eb;}
+    header {background:linear-gradient(135deg,#0ea5e9,#22c55e); padding:60px 20px; text-align:center; position:relative;}
+    header img.logo {position:absolute; top:20px; left:20px; width:70px;}
+    header h1 {margin:0; font-size:2.8rem; color:white;}
+    header p {color:#e0f2fe; font-size:1.1rem;}
+    .hero {background:url('weather.jpg') center/cover no-repeat; padding:120px 20px; text-align:center;}
+    .hero .overlay {background:rgba(2,6,23,0.7); padding:60px; border-radius:16px; max-width:900px; margin:auto;}
+    .btn {display:inline-block; padding:16px 36px; background:#22c55e; color:#022c22; text-decoration:none; border-radius:999px; font-weight:700; margin-top:20px;}
+    .btn:hover {background:#16a34a;}
+    section {padding:60px 20px; max-width:1100px; margin:auto;}
+    .grid {display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:24px;}
+    .card {background:#020617; padding:28px; border-radius:18px; box-shadow:0 20px 40px rgba(0,0,0,0.4);}    
+    .card h3 {color:#38bdf8;}
+    footer {background:#020617; color:#94a3b8; text-align:center; padding:30px;}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="college_logo.png" class="logo" alt="College Logo" />
+    <h1>Environmental Disease Prediction System</h1>
+    <p>AI-powered public health intelligence using Air Quality & Weather</p>
+  </header>
+
+  <div class="hero">
+    <div class="overlay">
+      <h2>Know Your Health Risk Before It Affects You</h2>
+      <p>We analyze real-time pollution and climate data to predict respiratory and viral disease risks in your city.</p>
+      <a href="http://localhost:8501" class="btn">Open Live Dashboard</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="grid">
+      <div class="card">
+        <h3>About</h3>
+        <p>This system converts environmental data into actionable health insights, helping communities take early precautions.</p>
+      </div>
+      <div class="card">
+        <h3>Why It Matters</h3>
+        <p>Pollution and climate change are increasing asthma, flu, and pneumonia. Early warnings save lives.</p>
+      </div>
+      <div class="card">
+        <h3>What We Do</h3>
+        <p>Collect AQI & weather → Run ML → Predict risk → Send alerts → Protect people.</p>
+      </div>
+      <div class="card">
+        <h3>Smart Alerts</h3>
+        <p>Users can subscribe to receive daily email alerts tailored to their city.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>MIET | Environmental Disease Prediction System</p>
+  </footer>
+</body>
+</html>
